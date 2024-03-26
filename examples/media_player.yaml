@@ -7,7 +7,7 @@ esphome:
 
   on_boot:
       priority: 600
-      then: 
+      then:
         - component.update: m5cores3_lcd
 
 
@@ -34,16 +34,18 @@ psram:
 
 external_components:
   - source:
-      type: local
-      path: /Users/siekmann/Privat/Projects/espHome/M5Stack_Core_S3/esphome/components
+      type: git
+      url: https://github.com/gnumpi/esphome_m5stack_core_s3
+      #type: local
+      #path: /Users/siekmann/Privat/Projects/espHome/M5Stack_Core_S3/esphome/components
     components: [ esp32_m5stack_core_s3, aw9523 ]
-  
+
   - source:
-      #type: git
-      #url: https://github.com/gnumpi/esphome_audio
-      #ref: main
-      type: local
-      path: /Users/siekmann/Privat/Projects/espHome/esphome_audio/esphome/components
+      type: git
+      url: https://github.com/gnumpi/esphome_audio
+      ref: m5_core_s3
+      #type: local
+      #path: /Users/siekmann/Privat/Projects/espHome/esphome_audio/esphome/components
     components: [ adf_pipeline, i2s_audio ]
 
 
@@ -85,7 +87,7 @@ globals:
     type: int
     restore_value: no
     initial_value: '5'
-  
+
   - id: mp_state
     type: int
     restore_value: no
@@ -112,9 +114,9 @@ font:
     size: 36
 
 display:
-  - platform: ili9xxx 
+  - platform: ili9xxx
     id: m5cores3_lcd
-    model: M5Stack 
+    model: M5Stack
     dimensions: 320x240
     cs_pin: GPIO3
     dc_pin: GPIO35
@@ -124,7 +126,7 @@ display:
       pin: 1
       mode:
         output: true
-    
+
     update_interval: never
     lambda: |-
         auto white = Color(255,255,255);
@@ -156,7 +158,7 @@ adf_pipeline:
     id: adf_i2s_out
     i2s_audio_id: i2s_0
     i2s_dout_pin: GPIO13
-  
+
 
 media_player:
   - platform: adf_pipeline
@@ -167,13 +169,13 @@ media_player:
       - self
       - resampler
       - adf_i2s_out
-    
+
     on_play:
       - lambda: id(mp_state) = 1;
-      - component.update: m5cores3_lcd    
+      - component.update: m5cores3_lcd
     on_idle:
       - lambda: id(mp_state) = 0;
-      - component.update: m5cores3_lcd    
+      - component.update: m5cores3_lcd
 
 binary_sensor:
   - platform: touchscreen
@@ -223,7 +225,7 @@ binary_sensor:
               - media_player.play
             else:
               - media_player.stop
-        
+
         - logger.log: "Play Paused pressed"
 
 
