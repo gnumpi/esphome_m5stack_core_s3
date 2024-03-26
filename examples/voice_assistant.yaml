@@ -1,0 +1,138 @@
+esphome:
+  name: m5_core_s3_media_player
+  min_version: 2023.12.7
+  platformio_options:
+    board_build.flash_mode: dio
+    board_upload.maximum_size: 16777216
+
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      # need to set a s3 compatible board for the adf-sdk to compile
+      # board specific code is not used though
+      CONFIG_ESP32_S3_BOX_BOARD: "y"
+      CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240: "y"
+      #CONFIG_ESP32S3_DATA_CACHE_64KB:      "y"
+      #CONFIG_ESP32S3_DATA_CACHE_LINE_64B:  "y"
+
+      #CONFIG_LOG_DEFAULT_LEVEL_DEBUG: "y"
+      #CONFIG_LOG_DEFAULT_LEVEL: "4"
+
+psram:
+  mode: quad
+  speed: 80MHz
+
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/m5stack/M5CoreS3-Esphome
+    refresh: 0s
+  
+  - source:
+      #type: git
+      #url: https://github.com/gnumpi/esphome_audio
+      #ref: main
+      type: local
+      path: /Users/siekmann/Privat/Projects/espHome/esphome_audio/esphome/components
+    components: [ adf_pipeline, i2s_audio, audio_processing ]
+
+
+# Enable logging
+logger:
+  deassert_rts_dtr: true
+  level: VERBOSE
+
+packages:
+  wifi: !include common/wifi.yaml
+
+api:
+
+i2c:
+  - id: bus_a
+    sda: GPIO12
+    scl: GPIO11
+    scan: True
+
+i2s_audio:
+  - id: i2s_shared
+    i2s_lrclk_pin: GPIO33
+    i2s_bclk_pin: GPIO34
+    i2s_mclk_pin: GPIO0
+
+
+# expose the i2s components as pipeline elements
+adf_pipeline:
+  - platform: i2s_audio
+    type: aw88298
+    id: adf_i2s_out
+    i2s_audio_id: i2s_shared
+    i2s_dout_pin: GPIO13
+  
+  - platform: i2s_audio
+    type: source
+    id: adf_i2s_in
+    i2s_audio_id: i2s_shared
+    i2s_din_pin: GPIO14
+  
+   
+media_player:
+  - platform: adf_pipeline
+    id: adf_media_player
+    name: s3-dev_media_player
+    internal: false
+    pipeline:
+      - self
+      - adf_i2s_out
+
+
+microphone:
+  - platform: my_esp_adf
+    id: adf_microphone 
+    pipeline:
+      - adf_i2s_in
+      - self
+
+
+
+voice_assistant:
+  microphone: adf_microphone
+  media_player: adf_media_player
+  use_wake_word: False
+
+  noise_suppression_level: 4
+  auto_gain: 31dBFS
+  volume_multiplier: 8.0
+
+  on_client_connected:
+    - if:
+        condition:
+          switch.is_on: use_wake_word
+        then:
+          - voice_assistant.start_continuous: 
+
+  on_client_disconnected:
+    - voice_assistant.stop
+
+
+switch:
+  - platform: template
+    name: Enable Voice Assistant
+    id: use_wake_word
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    icon: mdi:assistant
+    on_turn_on:
+      - if:
+          condition:
+                 not:
+                   - voice_assistant.is_running
+          then:
+                   - voice_assistant.start_continuous
+    on_turn_off:
+        - voice_assistant.stop
+        
