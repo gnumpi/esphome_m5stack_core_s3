@@ -3,6 +3,7 @@
 #include "esphome/core/log.h"
 
 namespace esphome {
+using namespace aw9523;
 namespace m5stack {
 
 static const char *TAG = "core_s3";
@@ -16,7 +17,7 @@ static const char *TAG = "core_s3";
     { board_t::board_M5StackCoreS3, 14,10, 18,17 },
     // clk,mosi,miso,cs
     { board_t::board_M5StackCoreS3, GPIO_NUM_36, GPIO_NUM_37, GPIO_NUM_35, GPIO_NUM_4  },
-    
+
 
 
     M5.begin();
@@ -120,11 +121,11 @@ void M5StackCoreS3::setup(){
     i2c::I2CDevice aw9523;
     aw9523.set_i2c_bus( this->bus_);
     aw9523.set_i2c_address(0x58);
-    
+
     i2c::I2CDevice axp2101;
     axp2101.set_i2c_bus( this->bus_);
     axp2101.set_i2c_address(0x34);
-    
+
     static constexpr std::uint8_t reg_data_array[] =
       { 0x90, 0xBF  // LDOS ON/OFF control 0
       , 0x92, 18 -5 // ALDO1 set to 1.8v // for AW88298
@@ -135,13 +136,13 @@ void M5StackCoreS3::setup(){
       , 0x69, 0x11 // CHGLED setting
       , 0x10, 0x30 // PMU common config
       };
-    
+
     //Axp2101.writeRegister8Array(reg_data_array, sizeof(reg_data_array));
     for (size_t i = 0; i < sizeof(reg_data_array); i+=2)
     {
       axp2101.reg(reg_data_array[i]) = reg_data_array[i+1];
     }
-    
+
     #define XPOWERS_AXP2101_LDO_ONOFF_CTRL0                  (0x90)
     uint8_t reg = axp2101.reg( XPOWERS_AXP2101_LDO_ONOFF_CTRL0 ).get();
     ESP_LOGCONFIG(TAG, "read XPOWERS_AXP2101_LDO_ONOFF_CTRL0 :0x%x", reg );
@@ -168,10 +169,19 @@ void M5StackCoreS3::setup(){
     aw9523.reg(0x12) = 0b11111111;  // LEDMODE_P0
     aw9523.reg(0x13) = 0b11111111;  // LEDMODE_P1
 
-
+    if(this->aw9523_ != nullptr){
+        this->write_bus_out_en(this->bus_out_en_);
+        this->write_usb_otg_en(this->usb_otg_en_);
+    }
 }
 
+void M5StackCoreS3::write_usb_otg_en(bool flag){
+    this->aw9523_->set_pin_value( AW9523Port::PORT_0, 5, flag);
+}
 
+void M5StackCoreS3::write_bus_out_en(bool flag){
+    this->aw9523_->set_pin_value( AW9523Port::PORT_0, 1, flag);
+}
 
 
 
